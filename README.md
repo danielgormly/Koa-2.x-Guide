@@ -167,11 +167,9 @@ const greetMiddleware = (ctx, next) => {
 app.use(greetMiddleware);
 ```
 
-Each time Koa uses a piece of middleware, it calls it with two arguments, `ctx` & `next`. `ctx` (short for context), is an object that lets you interface with Node's  request AND the response object, made possible thanks to the conceptual isomorphism of HTTP requests and responses and JavaScript's setters and getters. To illustrate this:
-
-1. 
-
-We will go through the exact mechanics of how this works in Koa's Engine #TODO later on.
+Each time Koa uses a piece of middleware, it injects two arguments into it:
+1. `ctx` (short for context), is an object that lets you interface with Node's  request AND the response object, made possible thanks to and JavaScript's setters and getters. We will explore this in detail in The Context Object. #TODO
+2. `next` is actually a reference to the next function in the middleware stack. If no middleware remain, or only one piece of middleware remains, Koa injects an empty function in its place.
 
 ## Orchestrating middleware
 
