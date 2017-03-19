@@ -7,14 +7,20 @@
 
 1. Prerequisites
 2. Changes from Koa 1.x
+
+Part 1: How Koa Works
+
 3. Getting started
 4. Node's HTTP interface
 5. Adding some sugar
 6. What is middleware?
 7. Orchestrating middleware
-8. Adding asynchrony
-9. Koa's engine
-10. The context object
+8. Working asynchronously
+9. The context object
+10. Examing real Koa code
+
+Part 2: Using Koa practically
+
 11. Content negotiation & headers
 12. Getting the body of an HTTP request
 13. Routing
@@ -173,9 +179,7 @@ Each time Koa uses a piece of middleware, it injects two arguments into it:
 
 ## Orchestrating middleware
 
-For pedagogical reasons, let's start with regular functions. Technically Koa can run on regular functions, however, to ensure maximum reusability, compatibility, consistency & predictability use async functions. If you start using middleware `await next()` and others with unadored `next()` calls you will create extremely confusing behaviour.
-
-Let's take a look at using 2 pieces of middleware with regular functions:
+Technically Koa can run on regular functions, however unless you only stick to `next()` calls as opposed to `await next()` calls this will lead to extremely confusing behaviour. To ensure maximum reusability, compatibility, consistency & predictability use async functions.  Let's take a look at using 2 pieces of middleware with regular functions:
 
 ```
 const koa = require('koa');
@@ -261,9 +265,23 @@ I have uploaded a complete working model of this [MiniKoa](https://gist.github.c
 
 Note: The real Koa protects us against calling next() twice from the same function.
 
-## Orchestrating middleware with async functions
+## Working Asynchronously
 
-As mentioned, Async functions are the standard way to do things in Koa. If we start mixing `await next()` with unadorned `next()` calls, we begin getting confusing results. Async functions start to show their benefits when we want to do things like make database calls. They allow us to write incredibly legible and easy to reason about asynchronous code.
+We've already established asynchrony, 
+
+Async functions start to show their benefits when we want to do things like make database calls. They allow us to write incredibly legible and easy to reason about asynchronous code.
+
+As mentioned, Async functions are the standard way to do things in Koa. If we start mixing `await next()` with unadorned `next()` calls, we begin getting confusing results. Let's not shy away from it though and see what happens.
+
+This is pretty wild and isn’t easily discerned without a little bit of knowledge
+of JS’s event loop. What is happening here, is that each call to  is being
+evaluated synchronously. Once we reach the last piece of middleware, we then 
+once more. We are not just executing synchronous code anymore, we have
+implicitly converted the expression returned by await to a promise. Just like
+using a , the await keyword means we will not execute proceeding code until the
+current thread has completed, i.e. at this point we defer code after our await
+statements to the job queue, which will execute after our first piece of
+middleware finishes.
 
 ## Koa's engine
 
@@ -291,83 +309,4 @@ Http request and response headers are largely isomorphic.
 
 ## Afterword
 
-Thanks for reading! 
-
-```
-koa = require('koa'); // We need Koa
-
-app = new koa(); // Koa 2 is defined with ES6 class syntax
-app.use(async (ctx, next) => {
-    console.log('1. This');
-    // Await all successive middleware before continuing:
-    await next();
-    console.log('6. app.');
-});
-
-app.use(async (ctx, next) => {
-    console.log('2. is');
-    // Await all successive middleware before continuing:
-    await next();
-console.log('5. 2');
-});
-
-app.use(async (ctx, next) => {
-    console.log('3. a');
-    // No more middleware left, we don't need a next() here but Koa will automatically fill it with null anyway:
-    await next();
-    console.log('4. Koa');
-});
-
-http.createServer(app.callback()).listen(3000);
-/* Same as the short form sugar app.listen(3000) */
-```
-
-So when we run this and send *any* HTTP request to this app, we get the output:
-
-```
-1. This
-2. is
-3. a
-4. Koa
-5. 2
-6. app
-```
-
-#### What is happening here?
-
-As they are defined in your code, each piece of middleware you register with 
-gets added to the middleware stack (a simple array) in the order you register
-them in.
-
-The stack is consumed by our app.callback() handler defined above. Firstly, each
-time the server receives a request, Koa will first create a very neatly
-organised (context) object with:
-
-Then Koa will call the Middleware stack. Koa calls each middleware function one
-by one, recursively from the previous function. This means that each next() call
-inside any middleware will be the initiator for every successive middleware.
-Thus if we call  on our first middleware (as we have), we are telling Koa to
-wait for *all* the middleware that follows to complete before we continue
-executing code.
-
-What if we took out the  keyword and just ran  solo? Let’s try it on the first
-middleware. The output we get back is:
-
-```
-1. This
-2. is
-3. a
-4. app.
-5. Koa
-6. 2
-```
-
-This is pretty wild and isn’t easily discerned without a little bit of knowledge
-of JS’s event loop. What is happening here, is that each call to  is being
-evaluated synchronously. Once we reach the last piece of middleware, we then 
-once more. We are not just executing synchronous code anymore, we have
-implicitly converted the expression returned by await to a promise. Just like
-using a , the await keyword means we will not execute proceeding code until the
-current thread has completed, i.e. at this point we defer code after our await
-statements to the job queue, which will execute after our first piece of
-middleware finishes.
+Thanks for reading!
