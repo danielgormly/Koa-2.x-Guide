@@ -1,7 +1,7 @@
 # Koa 2.x Extensive Introductory Guide
 
 #### Foreword
-[Koa](http://koajs.com/) is a lightweight, elegant web application framework for NodeJS based on the. I'm writing this guide as most writings on Koa gloss over its admittedly simple mechanisms that to some, might be self-evident, but to less seasoned coders might feel a little too magical. Like a lot of user friendly JS interfaces, it's very easy to jump into with very little idea of what you're really doing, leading to convoluted patterns, unexpected behaviour & generally bad practices. Koa's internal code however, is actually quite easy to reason about and with a thorough examination, can teach a beginner quite a lot about ES6, the HTTP protocol, NodeJS, developing web applications & dealing with asynchronous I/O.
+[Koa](http://koajs.com/) is a lightweight, elegant web application framework for NodeJS leaning heavily on the ES7 asyc/await function. I'm writing this guide as most writings on Koa gloss over its admittedly simple mechanisms that to some, might be self-evident, but to less seasoned coders might feel a little too magical. Like a lot of user friendly JS interfaces, it's very easy to jump into with very little idea of what you're really doing, leading to convoluted patterns, unexpected behaviour & generally bad practices. Koa's internal code however, is actually quite easy to reason about and with a thorough examination, can teach a beginner quite a lot about ES2015, the HTTP protocol, NodeJS, developing web applications & dealing with asynchronous I/O.
 
 #### Contents
 
@@ -45,7 +45,7 @@ Let's build an incredibly simple Koa app. Koa will take any request & spit out a
 const http = require('http'); // Require Node's HTTP module
 const koa = require('Koa'); // Require Koa
 
-/* Koa 2 is defined with the ES6 class syntax so we need to instantiate it with the following line */
+/* Koa 2 is defined with the ES2015 class syntax so we need to instantiate it with the following line */
 app = new Koa();
 
 /* Let's write our first piece of middleware */
@@ -65,7 +65,7 @@ If all has gone well, you should see "Not found" in your browser & "A request wa
 
 ###### Notes on `require('koa')`
 
-When we `const Koa = require('koa')`, we are telling Node to create a new [constant](https://developer.mozilla.org/en/docs/Web/JavaScript/Reference/Statements/const) named Koa and assigning it to the module that require('koa') exports. Because there is no `./`, `/` or `../` preceeding `koa` in the require call and Koa isn't a core Node module, Node's module loader will look in `node_modules/koa/package.json` and seek out the `main` key (read [Node's Module API](https://nodejs.org/api/modules.html)). In the case of Koa, this is `node_modules/koa/lib/application.js`. The `node_modules/koa/lib/application.js` is the Koa package's public interface. It exports an ES6 class named `Application` - the internal name the Koa's developers have chosen for it.
+When we `const Koa = require('koa')`, we are telling Node to create a new [constant](https://developer.mozilla.org/en/docs/Web/JavaScript/Reference/Statements/const) named Koa and assigning it to the module that require('koa') exports. Because there is no `./`, `/` or `../` preceeding `koa` in the require call and Koa isn't a core Node module, Node's module loader will look in `node_modules/koa/package.json` and seek out the `main` key (read [Node's Module API](https://nodejs.org/api/modules.html)). In the case of Koa, this is `node_modules/koa/lib/application.js`. The `node_modules/koa/lib/application.js` is the Koa package's public interface. It exports an ES2015 class named `Application` - the internal name the Koa's developers have chosen for it.
 
 When we import it, we are assigning it the name `Koa` with a capital "K" by convention, to signal to developers that this is a class or object to be instantiated, rather than a plain object. We use "Koa" rather than "Application" in our code because "Application" is confusing within our context.
 
@@ -142,7 +142,7 @@ The second think we can do is use Koa's `Koa.prototype.listen()` sugar. As the m
   }
   ```
   
-  Very simple. It creates a server with the app.callback() app as its argument, as `this` references the object from which `listen` was called from, then calls the instantiated server's `listen` method with the arguments given to `app.listen()` e.g. `8000`. 
+  Very simple. It creates a server with the app.callback() app as its argument, as `this` references the object from which `listen` was called from, then calls the instantiated server's `listen` method with the arguments given to `app.listen()` e.g. `8000`. Because http is already required into `node_modules/koa/lib/application.js` we no longer need to include it.
   
 ```
 const koa = require('Koa');
@@ -158,11 +158,11 @@ You've probably have used a bunch of middleware if you've come from Express. It'
 
 In Koa, middleware can take information, transform that information and generate a response . Our simple piece of middleware in our app is `app.use(() => console.log('Request made.'))`. You've probably noticed that isn't hugely useful. We can't read the contents of the request, we can't send anything back to the request. In fact Koa defaults to the response `Not found` with the status code `404` (more on that in chapters x & y #TODO). 
 
-Let's build a *slightly* more interesting piece of middleware using some Koa magic. This one simply returns 'Hi' to the user if and only if the requested path is '/greet' e.g. [localhost:8080/greet](http://localhost:8080/greet) is accessed in a web browser.
+Let's build a *slightly* more interesting piece of middleware using some Koa magic. This one simply returns 'Heyyyyyyyyyyyy.' to the user if and only if the requested path is '/greet' e.g. [localhost:8080/greet](http://localhost:8080/greet) is accessed in a web browser.
 
 ```
 const greetMiddleware = (ctx, next) => {
-    if (ctx.path = '/greet') ctx.body = 'Hi.'
+    if (ctx.path = '/greet') ctx.body = 'Heyyyyyyyyyyyy.'
 };
 app.use(greetMiddleware);
 ```
@@ -173,11 +173,97 @@ Each time Koa uses a piece of middleware, it injects two arguments into it:
 
 ## Orchestrating middleware
 
-We can break down Koa into 
+The recommended approach to using Koa is with async functions. But let's just start with regular functions. There's no technical reason you can't use regular functions, and in some cases (i.e. final piece of middleware it is perfectly fine to use them), however, to ensure maximum reusability, consistency & predictability, I would, and the Koa docs advise the use async functions.
 
-## Koa's engine
+Let's take a look at using 2 pieces of middleware with regular functions:
+
+```
+const koa = require('koa');
+const app = new koa();
+
+// middleware #1
+app.use(async (ctx, next) => {
+    console.log('greetings');
+    next();
+    console.log('lit af, fam');
+});
+
+// middleware #2
+app.use(async (ctx, next) => {
+    console.log('how are things?');
+    next();
+});
+
+app.listen(3000);
+```
+
+To give you a description of what is happening behind the scenes before revealing what .
+1. When the Koa `app` is instantiated with `new Koa()`, a property named `middleware` is attached to the app object itself with an empty array.
+**Note:** Koa v2 will attempt to convert legacy generator based middleware but support will be completely removed in v3.
+2. Each `app.use` call pushes the piece of middleware called to it, synchronously, in the order they are called to `app.middleware`. Thus app.middleware = [middleware1, middleware2];
+3. When a request is received, Node calls the `app.callback()` function. This argument calls each piece of middleware, starting at `app.middleware[0]` with the succeeding middleware as its argument until no more middleware remain. If next() is called on the final function, a blank function is returned, so nothing happens. Thus it is the `next()` call within the function that calls the following function. A simplified  version of `app.callback` might look like the following: (in reality, callback defers this behaviour to another function).
+
+```
+callback (ctx, index = 0) {
+    const isLast = index === middleware.length - 1;
+    let next = isLast ? () => {} : this.callback.bind(this, ctx, index + 1);
+    return this.middleware[index](ctx, next);
+}
+```
+
+So the next middleware function isn't injected directly, instead it injects a call to this iterator function which in turn, returns the next middleware function injected with a call to the next iterator function, and so on and so forth until there's no more middleware left to call. Recursion! We'll examine the actual code that is Async/Await friendly in The Koa engine #TODO.
+
+Anyway, the output, hopefully you guessed it, is:
+
+```
+greetings
+how are things?
+lit af, fam
+```
+
+Now let's introduce a 3rd piece just to make sure that you're following:
+
+```
+// middleware #3
+app.use(async (ctx, next) => {
+    console.log('not great tbh');
+    next();
+});
+```
+
+The output is:
+
+```
+greetings
+how are things?
+not great tbh
+lit af, fam
+```
+
+To expand the entire middleware stack out as it's called, in pseudocode:
+
+```
+INDEX = 0;
+START:MIDDLEWARE[INDEX]
+    LOG('greetings');
+    START:MIDDLEWARE[INDEX+1]
+        LOG('how are things?');
+        START:MIDDLEWARE[INDEX+2]
+            LOG('not great, tbh');
+        END:MIDDLEWARE[INDEX+2]
+    END:MIDDLEWARE[INDEX+1]
+    LOG('lit af, fam');
+END:MIDDLEWARE[INDEX]
+});
+```
+
+I have uploaded a complete working model of this [MiniKoa](https://gist.github.com/danielgormly/ef05053d73c163e528ce151d3f3284bf). It might help to play around with it. Try switching around the order of the `console.log` calls and the `next()` calls. The core iterator, which we will look at later, works on the same principles and really isn't much more complicated than that.
 
 ## Orchestrating middleware with async functions
+
+As mentioned, async functions are the standard way to do things in Koa
+
+## Koa's engine
 
 ## The context object
 
@@ -202,13 +288,6 @@ Http request and response headers are largely isomorphic.
 ## Afterword
 
 Thanks for reading! 
-
-
-
-
-## Quick refresh on using Koa 2 as a consumer
-
-Let’s make a basic Koa 2 app. Obviously we need to  (or  (pleb)) first.
 
 ```
 koa = require('koa'); // We need Koa
@@ -259,10 +338,6 @@ them in.
 The stack is consumed by our app.callback() handler defined above. Firstly, each
 time the server receives a request, Koa will first create a very neatly
 organised (context) object with:
-
-1.  Getters that allow you to access HTTP headers & body (though you’ll need
-middleware to do anything useful with the body)
-1.  Setters that allow you to set parameters for responding to the requester.
 
 Then Koa will call the Middleware stack. Koa calls each middleware function one
 by one, recursively from the previous function. This means that each next() call
