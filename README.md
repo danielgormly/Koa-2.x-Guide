@@ -169,11 +169,11 @@ app.use(greetMiddleware);
 
 Each time Koa uses a piece of middleware, it injects two arguments into it:
 1. `ctx` (short for context), is an object that lets you interface with Node's  request AND the response object, made possible thanks to and JavaScript's setters and getters. We will explore this in detail in The Context Object. #TODO
-2. `next` is actually a reference to the next function in the middleware stack. If no middleware remain, or only one piece of middleware remains, Koa injects an empty function in its place.
+2. `next` is actually a reference to the next function in the middleware stack. If zeri ir one piece of middleware remains, Koa injects an empty function in its place.
 
 ## Orchestrating middleware
 
-The recommended approach to using Koa is with async functions. But let's just start with regular functions. There's no technical reason you can't use regular functions, and in some cases (i.e. final piece of middleware it is perfectly fine to use them), however, to ensure maximum reusability, consistency & predictability, I would, and the Koa docs advise the use async functions.
+For pedagogical reasons, let's start with regular functions. Technically Koa can run on regular functions, however, to ensure maximum reusability, compatibility, consistency & predictability use async functions. If you start using middleware `await next()` and others with unadored `next()` calls you will create extremely confusing behaviour.
 
 Let's take a look at using 2 pieces of middleware with regular functions:
 
@@ -259,13 +259,17 @@ END:MIDDLEWARE[INDEX]
 
 I have uploaded a complete working model of this [MiniKoa](https://gist.github.com/danielgormly/ef05053d73c163e528ce151d3f3284bf). It might help to play around with it. Try switching around the order of the `console.log` calls and the `next()` calls. The core iterator, which we will look at later, works on the same principles and really isn't much more complicated than that.
 
+Note: The real Koa protects us against calling next() twice from the same function.
+
 ## Orchestrating middleware with async functions
 
-As mentioned, async functions are the standard way to do things in Koa
+As mentioned, Async functions are the standard way to do things in Koa. If we start mixing `await next()` with unadorned `next()` calls, we begin getting confusing results. Async functions start to show their benefits when we want to do things like make database calls. They allow us to write incredibly legible and easy to reason about asynchronous code.
 
 ## Koa's engine
 
 ## The context object
+
+So far, our examples have been ignoring the fact that we have clients who we want to get information from and serve information to. This is where the context object comes into play.
 
 Http request and response headers are largely isomorphic.
 
