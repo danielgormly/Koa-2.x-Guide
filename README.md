@@ -1,20 +1,32 @@
-# Koa 2.x In-depth introductory guide
+# Koa 2.x Extensive Introductory Guide
 
 #### Foreword
-[Koa](http://koajs.com/) is a lightweight, elegant web application framework for NodeJS based on the. I'm writing this guide as most writings on Koa gloss over its admittedly simple mechanisms that to some, might be self-evident, but to less seasoned coders might feel a little too magical. Like a lot of user friendly JS interfaces, it's very easy to jump into with very little idea of what you're really doing, leading to convoluted patterns, unexpected behaviour & generally bad practices. Koa's internal code however, is actually very easy to reason about and with a thorough examination, can teach a beginner quite a lot about the HTTP protocol, NodeJS, developing web applications & dealing with asynchronous I/O.
+[Koa](http://koajs.com/) is a lightweight, elegant web application framework for NodeJS based on the. I'm writing this guide as most writings on Koa gloss over its admittedly simple mechanisms that to some, might be self-evident, but to less seasoned coders might feel a little too magical. Like a lot of user friendly JS interfaces, it's very easy to jump into with very little idea of what you're really doing, leading to convoluted patterns, unexpected behaviour & generally bad practices. Koa's internal code however, is actually quite easy to reason about and with a thorough examination, can teach a beginner quite a lot about ES6, the HTTP protocol, NodeJS, developing web applications & dealing with asynchronous I/O.
 
 #### Contents
 
 1. Prerequisites
-
-2. Forward
-
-3. Changes from Koa 1.x
-
-4. Getting Started
+2. Changes from Koa 1.x
+3. Getting started
+4. Node's HTTP interface
+5. Adding some sugar
+6. What is middleware?
+7. Orchestrating middleware
+8. Adding asynchrony
+9. Koa's engine
+10. The context object
+11. Content negotiation & headers
+12. Getting the body of an HTTP request
+13. Routing
+14. Templating
+15. Cookies & sessions
+17. Testing
+18. Debugging
+19. Afterword
 
 #### Prerequisites
-A basic understanding of asynchronous JavaScript including the event loop, Promises, Generator functions & Async/Await will go a long way. [YDKJS Book 5](https://github.com/getify/You-Dont-Know-JS/tree/master/async%20&%20performance) provides a fantastic & substantial primer for JS asynchrony. Honestly if you're at all interested in understanding JS and don't have a good handle on asynchrony, there's really no excuse to not read this book. If you are very familiar with Generator functions but don't know Async/Await, the latter will be very easy to pick up. A slightly reductive but practical way to think of them is as self-iterating generator functions. You will also need an understanding of recursive programming. [EloquentJS Ch 05](http://eloquentjavascript.net/05_higher_order.html) has a good introduction to recursion that may take some time for beginners to grasp.
+
+I will try to add information useful for relative beginners to JavaScript.  However, a basic understanding of asynchronous JavaScript including the event loop, Promises, Generator functions & Async/Await will go a long way. [YDKJS Book 5](https://github.com/getify/You-Dont-Know-JS/tree/master/async%20&%20performance) provides a fantastic & substantial primer for JS asynchrony. Honestly if you're at all interested in understanding JS and don't have a good handle on asynchrony, there's really no excuse to not read this book. If you are very familiar with Generator functions but don't know Async/Await, the latter will be very easy to pick up. A slightly reductive but practical way to think of them is as self-iterating generator functions. You will also need an understanding of recursive programming. [EloquentJS Ch 05](http://eloquentjavascript.net/05_higher_order.html) has a good introduction to recursion that may take some time for beginners to grasp.
 
 #### Changes from Koa 1.x
 
@@ -25,7 +37,7 @@ I won't cover much of Koa 1.x and it's not necessary in understanding Koa 2.x. I
 Let's build an incredibly simple Koa app. Koa will take any request & spit out a message to the console.
 
 1. Download NodeJS 7.6.0 or later as Koa relies on Async/Await. Earlier versions of Node (7.0.x - 7.5.x) let you use the `--harmony` flag in the command line to use this feature experimentally. A version manager like NVM will help you install multiple versions of Node.
-2. Create a new directory and initialise a new NPM project inside that folder using the command line command `npm init -yes` or `yarn init -yes` (See [Yarn vs NPM](https://blog.risingstack.com/yarn-vs-npm-node-js-package-managers/)). The 'yes' flag will produce a `package.json` file with all the default answers.
+2. Create a new directory and initialise a new NPM project inside that folder using the command line command `npm init -yes` or `yarn init -yes` (See [Yarn vs NPM](https://blog.risingstack.com/yarn-vs-npm-node-js-package-managers/)). The 'yes' flag will produce a `package.json` file with all the default answers. You may have to add the Node installation to your PATH variable if npm isn't available in the terminal.
 3. Install Koa with `npm install koa`, `npm i koa` (shorthand syntax) or `yarn add koa`
 3. Make a new file `server.js`.
 4. Write the app:
@@ -37,7 +49,7 @@ const koa = require('Koa'); // Require Koa
 app = new Koa();
 
 /* Let's write our first piece of middleware */
-    app.use(function() {
+app.use(function() {
     console.log('Request made.');
 });
 
@@ -88,7 +100,7 @@ If the language of class, objects, constructors, prototypes, `__proto__` and `[[
 
 ## Node's HTTP interface
 
-Before we get any deeper into Koa, let's take a brief look at [Node's HTTP module](https://nodejs.org/api/http.html#http_class_http_server). This is how Koa is actually able to interact with the internet. The HTTP core module provides us with a convenient interface for reading HTTP requests, manipulating their contents and sending back appropriate responses. To use it, we first require the module, then we create a new server using its method `createServer()` and the argument that actually handles the request and finally we tell that server to listen on a particular port. Together, that looks like this:
+Before we get any deeper into Koa, let's take a brief look at [Node's HTTP module](https://nodejs.org/api/http.html#http_class_http_server). This is how Koa is actually able to interact with the internet. The HTTP core module provides us with a convenient interface for reading HTTP requests, manipulating their contents and sending back appropriate responses. To use it, we first require the module, then we create a new server using its method `createServer()` and the argument that actually handles the request (the request listener) and finally we tell that server to listen on a particular port. Together, that looks like this:
 
 ```
 const http = require('http');
@@ -103,30 +115,95 @@ const server = http.createServer(function (req, res) {
 server.listen(8000);
 ```
 
-The details here don't matter too much. The point is that ostensibly, this provides us with basically the exact same app as written above (there are some differences as we will see later). At this stage, we probably don't need Koa's overhead even at the benefit of hiding implementation details. As the app grows however, a callback based workflow and defining all behaviour [imperatively](http://stackoverflow.com/questions/1784664/what-is-the-difference-between-declarative-and-imperative-programming) won't cut it.
+The details here don't matter too much. The point is that ostensibly, this provides us with basically the exact same app as written above (there are some differences re. HTTP headers and methodology as we will see later). At this stage, we probably don't need Koa's overhead even at the benefit of hiding implementation details. As the app grows however, a callback based workflow and defining all behaviour [imperatively](http://stackoverflow.com/questions/1784664/what-is-the-difference-between-declarative-and-imperative-programming) won't cut it.
+
+The second important thing to realise is that in our Koa app, Koa.prototype.callback() is our HTTP request listener. It is the callable object (function) that handles requests to our newly created HTTP server.
 
 ## Adding some sugar
 
 ```
-const http = require('http'); // Require Node's HTTP module
 const koa = require('Koa'); // Require Koa
-
-/* Koa 2 is defined with the ES6 class syntax so we need to instantiate it with the following line */
 app = new Koa();
 
-/* Let's write our first piece of middleware */
-    app.use(function() {
-    console.log('Request made.');
-});
+app.use(() => console.log('Request made.'));
 
-/* And finally, let's use Koa to listen for requests over the HTTP protocol on port 8000 */
-http.createServer(app.callback()).listen(8000);
+app.listen(8000);
 ```
 
-The first area we can cut down on some typing while maintaining legibility is using ES6's arrow functions. We'll be using these from hereon out.
+The first area we can cut down on some typing while maintaining legibility is using ES6's arrow functions. We'll be using these from hereon out. When using an arrow function, we can optionally omit the curly braces if we are returning a single expression. The ommission of the `return` keyword is mandatory if ommitting curly braces.
 
+The second think we can do is use Koa's `Koa.prototype.listen()` sugar. As the most frequent use of Koa will be through Node's `HTTP#createServer` object (as opposed to the `HTTPS#createServer`), listen is provided as a convenient method to listen on a new server using Koa. Here is the actual code for listen:
 
-## Adding asynchrony
+```
+  listen() {
+    debug('listen');
+    const server = http.createServer(this.callback());
+    return server.listen.apply(server, arguments);
+  }
+  ```
+  
+  Very simple. It creates a server with the app.callback() app as its argument, as `this` references the object from which `listen` was called from, then calls the instantiated server's `listen` method with the arguments given to `app.listen()` e.g. `8000`. 
+  
+```
+const koa = require('Koa');
+const app = new koa;
+app.use(() => console.log('Request made.')).listen(8000);
+```
+
+We're also able to chain `app.use` calls as `Koa.prototype.use` returns the `this` - which is of course the `app` object in this case.
+
+## What is middleware?
+
+You've probably have used a bunch of middleware if you've come from Express. It's easy to consume middleware and have very little idea of what it's doing or even why you're using it. Middleware is quite a broad term depending on its context but it can be vaguely described as a chunk or chunks of code that sit between a request and a response.
+
+In Koa, middleware can take information, transform that information and generate a response . Our simple piece of middleware in our app is `app.use(() => console.log('Request made.'))`. You've probably noticed that isn't hugely useful. We can't read the contents of the request, we can't send anything back to the request. In fact Koa defaults to the response `Not found` with the status code `404` (more on that in chapters x & y #TODO). 
+
+Let's build a *slightly* more interesting piece of middleware using some Koa magic. This one simply returns 'Hi' to the user if and only if the requested path is '/greet' e.g. [localhost:8080/greet](http://localhost:8080/greet) is accessed in a web browser.
+
+```
+const greetMiddleware = (ctx, next) => {
+    if (ctx.path = '/greet') ctx.body = 'Hi.'
+};
+app.use(greetMiddleware);
+```
+
+Each time Koa uses a piece of middleware, it calls it with two arguments, `ctx` & `next`. `ctx` (short for context), is an object that lets you interface with Node's  request AND the response object, made possible thanks to the conceptual isomorphism of HTTP requests and responses and JavaScript's setters and getters. To illustrate this:
+
+1. 
+
+We will go through the exact mechanics of how this works in Koa's Engine #TODO later on.
+
+## Orchestrating middleware
+
+We can break down Koa into 
+
+## Koa's engine
+
+## Orchestrating middleware with async functions
+
+## The context object
+
+Http request and response headers are largely isomorphic.
+
+## Content headers, negotiation & CORs
+
+## Parsing
+
+## Routing
+
+## Templating
+
+## Error handling
+
+## Cookies & Sessions
+
+## Testing
+
+## Debugging
+
+## Afterword
+
+Thanks for reading! 
 
 
 
