@@ -1,7 +1,7 @@
 # Koa 2.x Extensive Introductory Guide
 
 #### Foreword
-[Koa](http://koajs.com/) is a lightweight, elegant web application framework for NodeJS leaning heavily on the ES7 asyc/await function. I'm writing this guide as most writings on Koa gloss over its admittedly simple mechanisms that to some, might be self-evident, but to less seasoned coders might feel a little too magical. Like a lot of user friendly JS interfaces, it's very easy to jump into with very little idea of what you're really doing, leading to convoluted patterns, unexpected behaviour & generally bad practices. Koa's internal code however, is actually quite easy to reason about and with a thorough examination, can teach a beginner quite a lot about ES2015, the HTTP protocol, NodeJS, developing web applications & dealing with asynchronous I/O.
+[Koa](http://koajs.com/) is a lightweight, elegant web application framework for NodeJS leaning heavily on the ES7 asyc/await function. I'm writing this guide as most writings on Koa gloss over its admittedly simple mechanisms that to some, might be self-evident, but to less seasoned coders might feel a little too magical. Like a lot of user friendly JS modules, it's very easy to jump into with very little idea of what you're really doing, leading to convoluted patterns, unexpected behaviour & generally bad practices. Koa's internal code however, is actually quite easy to reason about and with a thorough examination, can teach a beginner quite a lot about ES6 & 7 features, the HTTP protocol, NodeJS, developing web applications & dealing with asynchronous I/O.
 
 #### Contents
 
@@ -267,7 +267,7 @@ Note: The real Koa protects us against calling next() twice from the same functi
 
 ## Working Asynchronously
 
-We've already established asynchrony, 
+We've been using Async functions for every piece of middleware so far but we haven't exploited any of their features that differentiate them from regular functions. For all the applications we've written so far we can omit the `async` keyword and the output will remain identical. Actually th
 
 Async functions start to show their benefits when we want to do things like make database calls. They allow us to write incredibly legible and easy to reason about asynchronous code.
 
@@ -310,3 +310,8 @@ Http request and response headers are largely isomorphic.
 ## Afterword
 
 Thanks for reading!
+
+## Sources
+
+kick-off-koa
+koa.js
